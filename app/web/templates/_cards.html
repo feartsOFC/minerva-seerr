@@ -1,6 +1,6 @@
 {% for j in jogos %}
 <a class="card" href="/jogo/{{ j.id }}">
-  <div class="capa"><img src="/capas/{{ j.id }}" alt="" loading="lazy" decoding="async"><span class="selo">{{ j.curto }}</span>{% if j.capa_incerta %}<span class="incerta" title="Capa casada por nome parecido">≈ CAPA</span>{% endif %}</div>
+  <div class="capa"><img src="/capas/{{ j.id }}?v=2" alt="" loading="lazy" decoding="async"><span class="selo">{{ j.curto }}</span>{% if j.capa_incerta %}<span class="incerta" title="Capa casada por nome parecido">≈ CAPA</span>{% endif %}</div>
   <h3>{{ j.titulo }}</h3>
   <div class="meta"><span>{{ j.ano or '' }}{% if j.ano and j.qtd_versoes > 1 %} · {% endif %}{% if j.qtd_versoes > 1 %}{{ j.qtd_versoes }} VERSÕES{% endif %}</span><em>{{ j.tamanho_princ|tamanho }}</em></div>
 </a>

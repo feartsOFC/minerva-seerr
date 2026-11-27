@@ -19,7 +19,7 @@ function pedido(limite) {
 {% block corpo %}
 <section class="jogo">
   <div class="p">
-    <div class="capa-grande"><img src="/capas/{{ j.id }}" alt="Capa de {{ j.titulo }}"><span class="selo">{{ j.curto }}</span></div>
+    <div class="capa-grande"><img src="/capas/{{ j.id }}?v=2" alt="Capa de {{ j.titulo }}"><span class="selo">{{ j.curto }}</span></div>
     <p class="fonte" style="margin:8px 0 0">CAPA: {{ (j.capa_fonte or 'sem capa')|upper }}{% if j.capa_incerta %} · <span class="aviso">CASAMENTO INCERTO</span>{% endif %}</p>
   </div>
   <div class="p">

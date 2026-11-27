@@ -2,7 +2,7 @@
 {% for p in lista %}
 {% set st = ROTULO_STATUS.get(p.status, (p.status|upper, 'apagado')) %}
 <article class="pedido">
-  <a class="mini-capa" href="/jogo/{{ p.jogo_id }}"><img src="/capas/{{ p.jogo_id }}" alt="" loading="lazy"></a>
+  <a class="mini-capa" href="/jogo/{{ p.jogo_id }}"><img src="/capas/{{ p.jogo_id }}?v=2" alt="" loading="lazy"></a>
   <div>
     <h3><a href="/jogo/{{ p.jogo_id }}">{{ p.titulo }}</a></h3>
     <div class="det"><b>{{ p.plataforma }}</b> · {{ p.versao_rotulo }} · {{ p.tamanho|tamanho }}{% if todos %} · <b>{{ p.usuario }}</b>{% endif %} · {{ p.criado_em|quando }}</div>

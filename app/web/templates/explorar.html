@@ -23,7 +23,7 @@
   <div class="faixa">
     {% for j in alta %}
     <a class="card" href="/jogo/{{ j.id }}">
-      <div class="capa"><img src="/capas/{{ j.id }}" alt="" loading="lazy" decoding="async"><span class="selo">{{ j.curto }}</span><span class="pos">{{ loop.index }}</span></div>
+      <div class="capa"><img src="/capas/{{ j.id }}?v=2" alt="" loading="lazy" decoding="async"><span class="selo">{{ j.curto }}</span><span class="pos">{{ loop.index }}</span></div>
       <h3>{{ j.titulo }}</h3>
       <div class="meta"><span>{{ j.ano or '' }}</span>{% if j.nota %}<em>★ {{ '%.1f'|format(j.nota) }}</em>{% endif %}</div>
     </a>
