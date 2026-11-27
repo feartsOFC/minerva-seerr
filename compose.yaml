@@ -1,0 +1,16 @@
+name: minerva-seerr
+
+services:
+  app:
+    build: .
+    image: minerva-seerr:local
+    container_name: minerva-seerr
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${MINERVA_PORTA:-8000}:8000"
+    volumes:
+      - ./data:/data          # banco SQLite, .torrent do índice e cache de capas
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

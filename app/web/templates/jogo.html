@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block titulo %}{{ j.titulo }}<script>
+function pedido(limite) {
+  return {
+    limite, total: 0, resumo: '',
+    somar() {
+      const f = this.$root, v = f.querySelector('input[name=versao]:checked');
+      const ex = [...f.querySelectorAll('input[name=extra]:checked')];
+      this.total = (v ? +v.dataset.tam : 0) + ex.reduce((s, e) => s + +e.dataset.tam, 0);
+      const d = ex.filter(e => e.dataset.grupo === 'dlc').length, u = ex.length - d;
+      this.resumo = [d && d + ' DLC', u && u + (u > 1 ? ' ATUALIZAÇÕES' : ' ATUALIZAÇÃO')].filter(Boolean).join(' + ');
+    },
+    todas(grupo, ligar) { this.$root.querySelectorAll(`input[data-grupo=${grupo}]`).forEach(e => e.checked = ligar); this.somar(); },
+    fmt(n) { const g = n / 1073741824; return (g >= 1 ? g.toFixed(1) + ' GB' : (n / 1048576).toFixed(0) + ' MB').replace('.', ','); },
+  };
+}
+</script>
+{% endblock %}
+{% block corpo %}
+<section class="jogo">
+  <div class="p">
+    <div class="capa-grande"><img src="/capas/{{ j.id }}" alt="Capa de {{ j.titulo }}"><span class="selo">{{ j.curto }}</span></div>
+    <p class="fonte" style="margin:8px 0 0">CAPA: {{ (j.capa_fonte or 'sem capa')|upper }}{% if j.capa_incerta %} · <span class="aviso">CASAMENTO INCERTO</span>{% endif %}</p>
+  </div>
+  <div class="p">
+    <div class="rot"><b>{{ j.plataforma }}</b><a href="/?plataforma={{ j.plataforma_id }}">← CATÁLOGO</a></div>
+    <h2>{{ j.titulo }}</h2>
+    <div class="fichas">
+      <div><small>ANO</small><b>{{ j.ano or '—' }}</b></div>
+      <div><small>NOTA IGDB</small><b>{{ '%.1f'|format(j.nota) if j.nota else '—' }}</b></div>
+      <div><small>TAMANHO</small><b>{{ j.versoes[0].tamanho|tamanho if j.versoes else '—' }}</b></div>
+      <div><small>VERSÕES</small><b>{{ j.versoes|length }}</b></div>
+      <div style="grid-column: span 2"><small>GÊNERO</small><b class="longo">{{ j.generos or '—' }}</b></div>
+      <div style="grid-column: span 2"><small>COLEÇÃO DE ORIGEM</small><b class="longo">{{ j.versoes[0].colecao if j.versoes else '—' }}</b></div>
+    </div>
+    {% if j.sinopse %}<p class="sinopse">{{ j.sinopse }}</p>{% endif %}
+    <p class="fonte">{% if j.meta_fonte == 'igdb' and j.nome_fonte %}DADOS: IGDB · “{{ j.nome_fonte }}”{% if j.meta_incerta %} · <span class="aviso">CASAMENTO INCERTO</span>{% endif %}{% elif not j.sinopse %}SEM SINOPSE (IGDB DESLIGADO OU JOGO NÃO ENCONTRADO){% endif %}</p>
+  </div>
+</section>
+
+<section class="jogo">
+  <div class="p">
+    <div class="rot amarelo"><b>SEUS PEDIDOS</b><span>ENTREGA NO PC {{ (u.pc or '—')|upper }}</span></div>
+    <div id="status" hx-get="/parcial/jogo/{{ j.id }}/status" hx-trigger="every 5s [document.visibilityState=='visible']" hx-swap="innerHTML">
+      {% set jogo_id = j.id %}{% include "_status_jogo.html" %}
+    </div>
+  </div>
+  <form class="p pedir" hx-post="/jogo/{{ j.id }}/pedir" hx-target="#status" hx-swap="innerHTML" hx-disabled-elt="button"
+        x-data="pedido({{ limite }})" @change="somar()" x-init="somar()">
+    <div class="rot"><b>ESCOLHA A VERSÃO</b><span>REGIÃO · IDIOMA · REVISÃO</span></div>
+    <div class="versoes">
+      {% for v in j.versoes %}
+      {% set grande = v.tamanho > limite %}
+      <label class="versao{% if grande %} grande{% endif %}" {% if grande %}title="Passa do limite por pedido"{% endif %}>
+        <input type="radio" name="versao" value="{{ v.chave }}" data-tam="{{ v.tamanho }}" {% if v.chave == j.principal and not grande %}checked{% endif %} {% if grande %}disabled{% endif %}>
+        <span class="nome">{{ v.rotulo }}{% if v.tipo != 'jogo' %}<span class="tag {{ v.tipo }}">{{ {'demo':'DEMO','beta':'BETA','bonus':'BONUS'}[v.tipo] }}</span>{% endif %}
+          <small>{% for a in v.arquivos %}{{ a.nome }}{% if not loop.last %} + {% endif %}{% endfor %}</small></span>
+        <span class="tam">{{ v.tamanho|tamanho }}{% if v.arquivos|length > 1 %} · {{ v.arquivos|length }} DISCOS{% endif %}</span>
+      </label>
+      {% endfor %}
+      {% if j.dlcs or j.atualizacoes %}
+      <label class="versao">
+        <input type="radio" name="versao" value="" data-tam="0">
+        <span class="nome">JÁ TENHO O JOGO<small>Baixar só as DLCs/atualizações marcadas abaixo.</small></span><span class="tam">—</span>
+      </label>
+      {% endif %}
+    </div>
+
+    {% if j.dlcs %}
+    <div class="rot comp"><b>DLC · {{ j.dlcs|length }}</b>
+      <span><button type="button" class="link" @click="todas('dlc', true)">MARCAR TODAS</button> · <button type="button" class="link" @click="todas('dlc', false)">NENHUMA</button></span></div>
+    <div class="comps">
+      {% for d in j.dlcs %}
+      <label class="liga comp-item"><span>{{ d.rotulo }}<small>{{ d.nome }}</small></span>
+        <em>{{ d.tamanho|tamanho }}</em><input type="checkbox" name="extra" value="{{ d.id }}" data-tam="{{ d.tamanho }}" data-grupo="dlc"></label>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if j.atualizacoes %}
+    <div class="rot comp"><b>ATUALIZAÇÕES · {{ j.atualizacoes|length }}</b><span>TITLE UPDATES · NÃO OFICIAL</span></div>
+    <div class="comps">
+      {% for d in j.atualizacoes %}
+      <label class="liga comp-item"><span>{{ d.rotulo }}{% if d.recente %}<span class="tag novo">MAIS RECENTE</span>{% endif %}<small>{{ d.nome }}</small></span>
+        <em>{{ d.tamanho|tamanho }}</em><input type="checkbox" name="extra" value="{{ d.id }}" data-tam="{{ d.tamanho }}" data-grupo="update"></label>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="total" :class="{ estourou: total > limite }">
+      <span>TOTAL DO PEDIDO{% if j.dlcs or j.atualizacoes %} <small x-text="resumo"></small>{% endif %}</span>
+      <b x-text="fmt(total) + ' / ' + fmt(limite)"></b>
+    </div>
+    <span class="barrinha"><i :style="'width:' + Math.min(100, 100 * total / limite) + '%; --cor: var(--' + (total > limite ? 'vermelho' : 'amarelo') + ')'"></i></span>
+    <div class="acoes">
+      <button class="botao" :disabled="total > limite || total == 0">▶ Solicitar</button>
+      <span class="nota" x-text="total > limite ? 'Passa do limite por pedido: desligue algumas DLCs ou peça em duas vezes.' : 'Baixa só os arquivos escolhidos (so=) e entrega no seu PC fora do horário de ponta.'"></span>
+    </div>
+  </form>
+</section>
+<script>
+function pedido(limite) {
+  return {
+    limite, total: 0, resumo: '',
+    somar() {
+      const f = this.$root, v = f.querySelector('input[name=versao]:checked');
+      const ex = [...f.querySelectorAll('input[name=extra]:checked')];
+      this.total = (v ? +v.dataset.tam : 0) + ex.reduce((s, e) => s + +e.dataset.tam, 0);
+      const d = ex.filter(e => e.dataset.grupo === 'dlc').length, u = ex.length - d;
+      this.resumo = [d && d + ' DLC', u && u + (u > 1 ? ' ATUALIZAÇÕES' : ' ATUALIZAÇÃO')].filter(Boolean).join(' + ');
+    },
+    todas(grupo, ligar) { this.$root.querySelectorAll(`input[data-grupo=${grupo}]`).forEach(e => e.checked = ligar); this.somar(); },
+    fmt(n) { const g = n / 1073741824; return (g >= 1 ? g.toFixed(1) + ' GB' : (n / 1048576).toFixed(0) + ' MB').replace('.', ','); },
+  };
+}
+</script>
+{% endblock %}

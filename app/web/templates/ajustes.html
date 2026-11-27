@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block titulo %}Ajustes{% endblock %}
+{% block corpo %}
+{% if u.papel == 'admin' %}
+<section class="resumo">
+  <div class="p"><div class="rot"><b>JOGOS</b></div><div class="v">{{ total_jogos }}</div></div>
+  <div class="p"><div class="rot"><b>COM CAPA</b></div><div class="v">{{ (100 * com_capa / total_jogos)|round|int if total_jogos else 0 }}<small>%</small></div></div>
+  <div class="p"><div class="rot"><b>COM FICHA IGDB</b></div><div class="v">{{ com_meta }}</div></div>
+  <div class="p"><div class="rot"><b>ARQUIVOS</b></div><div class="v">{{ stats.arquivos }}</div></div>
+</section>
+{% endif %}
+<section class="ajustes">
+{% if u.papel == 'admin' %}
+  <form class="p" hx-post="/ajustes/pedidos" hx-target="find .resultado">
+    <div class="rot"><b>PEDIDOS E LIMITES</b><span>VALEM PARA TODOS</span></div>
+    <div class="duas">
+      <label class="campo"><span>LIMITE POR PEDIDO (GB)</span><input type="number" name="limite_gb" min="1" max="500" value="{{ ped.limite_gb }}"></label>
+      <label class="campo"><span>PEDIDOS POR DIA</span><input type="number" name="pedidos_por_dia" min="1" max="100" value="{{ ped.pedidos_por_dia }}"></label>
+    </div>
+    <label class="campo"><span>ESPAÇO MÍNIMO NO SERVIDOR (GB) <small>— abaixo disso o pedido espera</small></span><input type="number" name="espaco_minimo_gb" min="0" max="2000" value="{{ ped.espaco_minimo_gb }}"></label>
+    <label class="campo"><span>PASTA NO PC <small>— dentro da pasta de torrents; {plataforma} vira o nome do console</small></span><input type="text" name="destino_pc" value="{{ ped.destino_pc }}" spellcheck="false"></label>
+    <label class="campo"><span>QBITTORRENT (WEBUI)</span><input type="url" name="qbit_url" value="{{ ped.qbit_url }}" spellcheck="false"></label>
+    <label class="liga"><span>APROVAÇÃO DO ADMIN<small>Pedidos de usuário comum esperam você aprovar.</small></span><input type="checkbox" name="aprovacao" {% if ped.aprovacao %}checked{% endif %}></label>
+    <div class="fim-bloco"><button class="botao sec">Salvar</button><span class="resultado"></span></div>
+  </form>
+
+  <div class="p" x-data="{ r: '', t: false }">
+    <div class="rot"><b>QBITTORRENT</b><span>WEB API</span></div>
+    <div class="linha-dados"><span>ENDEREÇO</span><b>{{ ped.qbit_url }}</b></div>
+    <div class="linha-dados"><span>CATEGORIA</span><b>{{ ped.qbit_categoria }}</b></div>
+    <div class="fim-bloco">
+      <button class="botao sec" :disabled="t" @click="t = true; r = '…'; fetch('/api/qbit/teste').then(x => x.json().then(j => r = x.ok ? '✓ qBittorrent ' + j.qbittorrent + ' · ' + (j.espaco_livre / 1e9).toFixed(0) + ' GB livres' : '✗ ' + (j.detail || x.status))).catch(e => r = '✗ ' + e).finally(() => t = false)">Testar conexão</button>
+      <span class="resultado" :class="r.startsWith('✓') ? 'ok' : 'ruim'" x-text="r"></span>
+    </div>
+  </div>
+
+  <form class="p" hx-post="/ajustes/capas" hx-target="find .resultado">
+    <div class="rot"><b>CAPAS E FICHAS</b><span>LIBRETRO → IGDB</span></div>
+    <label class="liga"><span>LIBRETRO-THUMBNAILS<small>Capas sem chave, por nome No-Intro/Redump. Primeira opção.</small></span><input type="checkbox" name="libretro" {% if libretro_ligado %}checked{% endif %}></label>
+    <label class="liga"><span>IGDB (TWITCH)<small>Sinopse, ano, nota, gênero e capa quando o libretro não tem.</small></span><input type="checkbox" name="igdb" {% if igdb_ligado %}checked{% endif %}></label>
+    <div class="duas" style="margin-top:8px">
+      <label class="campo"><span>CLIENT ID {% if igdb_id %}<small>· salvo</small>{% endif %}</span><input type="text" name="igdb_id" placeholder="{{ '•••••• (vazio = mantém)' if igdb_id else '' }}" autocomplete="off" spellcheck="false"></label>
+      <label class="campo"><span>CLIENT SECRET</span><input type="password" name="igdb_secret" placeholder="{{ '•••••• (vazio = mantém)' if igdb_id else '' }}" autocomplete="new-password"></label>
+    </div>
+    <div class="fim-bloco"><button class="botao sec">Salvar e validar</button><span class="resultado"></span></div>
+  </form>
+
+  <div class="p" x-data="{ r: '', est: null, timer: null,
+      ver() { fetch('/api/indexador').then(x => x.json()).then(j => { this.est = j; if (!j.rodando && this.timer) { clearInterval(this.timer); this.timer = null; this.r = j.erro ? '✗ ' + j.erro : '✓ índice atualizado' } }) },
+      rodar(f) { this.r = '…'; fetch('/api/indexador/atualizar' + (f ? '?forcar=true' : ''), { method: 'POST' }).then(x => { if (!x.ok) return x.json().then(j => this.r = '✗ ' + j.detail); this.r = 'atualizando…'; this.timer = setInterval(() => this.ver(), 2000) }) } }" x-init="ver()">
+    <div class="rot"><b>INDEXADOR</b><span>MINERVA ARCHIVE</span></div>
+    <div class="linha-dados"><span>COLEÇÕES</span><b>{{ stats.colecoes }}</b></div>
+    <div class="linha-dados"><span>ÚLTIMA ATUALIZAÇÃO</span><b>{{ stats.ultima_atualizacao|quando }}</b></div>
+    <div class="linha-dados" x-show="est && est.rodando"><span x-text="est && est.etapa ? est.etapa.toUpperCase() : ''"></span><b x-text="est ? est.n + ' / ' + est.total : ''"></b></div>
+    <div class="fim-bloco">
+      <button class="botao sec" @click="rodar(false)" :disabled="est && est.rodando">Atualizar agora</button>
+      <button class="botao sec" @click="if (confirm('Baixar e reler todos os .torrent?')) rodar(true)" :disabled="est && est.rodando">Forçar</button>
+      <span class="resultado" :class="r.startsWith('✗') ? 'ruim' : 'ok'" x-text="r"></span>
+    </div>
+  </div>
+
+  <div class="p">
+    <div class="rot"><b>USUÁRIOS</b><span>ENTREGA NO PC</span></div>
+    {% for x in usuarios %}<div class="linha-dados"><span>{{ x.nome }} · {{ x.papel }}</span><b>{{ x.pc or '—' }}</b></div>{% endfor %}
+  </div>
+{% endif %}
+
+  <form class="p" hx-post="/ajustes/senha" hx-target="find .resultado" hx-on::after-request="if (event.detail.successful && this.querySelector('.ok')) this.reset()">
+    <div class="rot amarelo"><b>MINHA SENHA</b><span>{{ u.nome }}</span></div>
+    <label class="campo"><span>SENHA ATUAL</span><input type="password" name="atual" autocomplete="current-password" required></label>
+    <div class="duas">
+      <label class="campo"><span>NOVA (MÍN. 8)</span><input type="password" name="nova" minlength="8" autocomplete="new-password" required></label>
+      <label class="campo"><span>REPETIR</span><input type="password" name="nova2" minlength="8" autocomplete="new-password" required></label>
+    </div>
+    <div class="fim-bloco"><button class="botao sec">Trocar senha</button><span class="resultado"></span></div>
+  </form>
+</section>
+{% endblock %}

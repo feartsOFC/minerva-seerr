@@ -1,0 +1,13 @@
+{% for j in jogos %}
+<a class="card" href="/jogo/{{ j.id }}">
+  <div class="capa"><img src="/capas/{{ j.id }}" alt="" loading="lazy" decoding="async"><span class="selo">{{ j.curto }}</span>{% if j.capa_incerta %}<span class="incerta" title="Capa casada por nome parecido">≈ CAPA</span>{% endif %}</div>
+  <h3>{{ j.titulo }}</h3>
+  <div class="meta"><span>{{ j.ano or '' }}{% if j.ano and j.qtd_versoes > 1 %} · {% endif %}{% if j.qtd_versoes > 1 %}{{ j.qtd_versoes }} VERSÕES{% endif %}</span><em>{{ j.tamanho_princ|tamanho }}</em></div>
+</a>
+{% else %}
+{% if inicio %}<p class="vazio">Nada encontrado. Tente menos palavras ou outra plataforma.</p>{% endif %}
+{% endfor %}
+{% if jogos|length == 48 %}
+<div class="mais" hx-get="/parcial/catalogo?q={{ q|q }}&plataforma={{ plataforma or '' }}&extras={{ 'true' if extras else 'false' }}&offset={{ offset }}"
+     hx-trigger="revealed" hx-swap="outerHTML">CARREGANDO MAIS…</div>
+{% endif %}

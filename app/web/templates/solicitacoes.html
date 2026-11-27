@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block titulo %}Solicitações{% endblock %}
+{% block corpo %}
+{% set ativos = lista|selectattr('status', 'in', ['na_fila','baixando','pausado','baixado','entregando','sem_espaco','aguardando_aprovacao'])|list %}
+<section class="resumo">
+  <div class="p"><div class="rot"><b>EM ANDAMENTO</b></div><div class="v">{{ ativos|length }}</div></div>
+  <div class="p"><div class="rot"><b>NO PC</b></div><div class="v">{{ lista|selectattr('status','equalto','entregue')|list|length }}</div></div>
+  <div class="p"><div class="rot amarelo"><b>ESPERANDO</b></div><div class="v">{{ ativos|selectattr('status','in',['baixado','aguardando_aprovacao','sem_espaco'])|list|length }}</div></div>
+  <div class="p"><div class="rot"><b>EM FILA</b></div><div class="v">{{ (ativos|sum(attribute='tamanho'))|tamanho }}</div></div>
+</section>
+<section class="p">
+  <div class="rot"><b>SOLICITAÇÕES</b>
+    <span>{% if u.papel == 'admin' %}<a href="/solicitacoes?todos={{ 'false' if todos else 'true' }}">{{ 'MOSTRAR SÓ AS MINHAS' if todos else 'MOSTRAR DE TODOS' }}</a>{% else %}SUAS{% endif %}</span></div>
+  <div id="lista" hx-get="/parcial/solicitacoes?todos={{ 'true' if todos else 'false' }}" hx-trigger="every 5s [document.visibilityState=='visible']" hx-swap="innerHTML">
+    {% include "_lista_pedidos.html" %}
+  </div>
+</section>
+{% endblock %}

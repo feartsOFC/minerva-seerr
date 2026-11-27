@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block titulo %}Explorar{% endblock %}
+{% block corpo %}
+<section class="p filtros">
+  <div class="rot"><b>CATÁLOGO</b><span>MINERVA ARCHIVE · {{ plats|sum(attribute='jogos') }} JOGOS</span></div>
+  <form class="busca" hx-get="/parcial/catalogo" hx-target="#grade" hx-trigger="input changed delay:300ms from:input[name=q], change, submit"
+        hx-push-url="false" hx-indicator="#buscando" onsubmit="return false">
+    <span>›</span>
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar jogo — ex.: guitar hero" autocomplete="off" enterkeyhint="search" aria-label="Buscar jogo">
+    <input type="hidden" name="plataforma" value="{{ plataforma or '' }}">
+    <span id="buscando" class="htmx-indicator">BUSCANDO…</span>
+  </form>
+  <nav class="chips" aria-label="Plataformas">
+    <a class="chip" href="/?q={{ q|q }}" aria-pressed="{{ 'true' if not plataforma else 'false' }}">Todas</a>
+    {% for p in plats %}<a class="chip" href="/?plataforma={{ p.id }}&q={{ q|q }}" aria-pressed="{{ 'true' if plataforma == p.id else 'false' }}">{{ p.curto }}<b>{{ p.jogos }}</b></a>{% endfor %}
+    <label><input type="checkbox" {% if extras %}checked{% endif %} onchange="location.href='/?extras='+(this.checked?'true':'false')+'&plataforma={{ plataforma or '' }}&q={{ q|q }}'"> Demos e betas</label>
+  </nav>
+</section>
+
+{% if alta %}
+<section class="p">
+  <div class="rot"><b>EM ALTA</b><span>MAIS PEDIDOS · MAIS BEM AVALIADOS</span></div>
+  <div class="faixa">
+    {% for j in alta %}
+    <a class="card" href="/jogo/{{ j.id }}">
+      <div class="capa"><img src="/capas/{{ j.id }}" alt="" loading="lazy" decoding="async"><span class="selo">{{ j.curto }}</span><span class="pos">{{ loop.index }}</span></div>
+      <h3>{{ j.titulo }}</h3>
+      <div class="meta"><span>{{ j.ano or '' }}</span>{% if j.nota %}<em>★ {{ '%.1f'|format(j.nota) }}</em>{% endif %}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="p">
+  <div class="rot"><b>{{ 'RESULTADOS' if q else 'TODOS OS JOGOS' }}</b><span>A–Z</span></div>
+  <div class="grade" id="grade">{% include "_cards.html" %}</div>
+</section>
+{% endblock %}

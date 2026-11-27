@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<title>{% block titulo %}Minerva{% endblock %} · Minerva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/minerva.css?v=5">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230a0a0a'/%3E%3Crect x='3' y='3' width='10' height='10' fill='none' stroke='%234af626' stroke-width='2'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%23ffd23f'/%3E%3C/svg%3E">
+<script src="/static/htmx.min.js" defer></script>
+<script src="/static/alpine.min.js" defer></script>
+</head>
+<body>
+<div class="hud">
+  <header class="p barra">
+    <h1>MINERVA</h1><span class="sub">// JOGOS</span>
+    <nav class="abas" aria-label="Seções">
+      <a href="/" {% if aba == 'explorar' %}aria-current="page"{% endif %}>Explorar</a>
+      <a href="/solicitacoes" {% if aba == 'solicitacoes' %}aria-current="page"{% endif %}>Solicitações</a>
+      <a href="/ajustes" {% if aba == 'ajustes' %}aria-current="page"{% endif %}>Ajustes</a>
+    </nav>
+    <div class="quem"><span>{{ u.papel }} · <b>{{ u.nome }}</b></span>
+      <form method="post" action="/sair"><button>Sair</button></form></div>
+  </header>
+  {% block corpo %}{% endblock %}
+</div>
+</body>
+</html>

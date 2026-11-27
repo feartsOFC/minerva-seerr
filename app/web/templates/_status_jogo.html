@@ -1,0 +1,15 @@
+{% if erro %}<p class="erro-msg">✗ {{ erro }}</p>{% endif %}
+{% for p in meus %}
+{% set st = ROTULO_STATUS.get(p.status, (p.status|upper, 'apagado')) %}
+<div class="meu">
+  <div class="l1"><span>{{ p.versao_rotulo }}</span><span class="st {{ st[1] }}">{{ st[0] }}{% if p.status == 'baixando' %} {{ (p.progresso * 100)|round(0)|int }}%{% endif %}</span></div>
+  {% if p.status in ('na_fila','baixando','pausado','baixado','entregando','entregue') %}
+  <span class="barrinha"><i style="width: {{ (p.progresso * 100)|round(1) }}%; --cor: var(--{{ 'verde' if p.status == 'entregue' else 'amarelo' }})"></i></span>
+  {% endif %}
+  {% if p.destino %}<span class="so">NO PC: {{ p.destino|replace('/', '\\') }}</span>{% endif %}
+  {% if p.erro %}<span class="so" style="color: var(--{{ 'vermelho' if p.status == 'erro' else 'amarelo' }})">{{ p.erro }}</span>{% endif %}
+  <details><summary>MAGNET ENVIADO · so={{ (p.magnet or '').split('&so=')[1].split('&')[0] if '&so=' in (p.magnet or '') else '—' }}</summary><code>{{ p.magnet }}</code></details>
+</div>
+{% else %}
+<p class="vazio" style="padding:4px 0">Você ainda não pediu este jogo.</p>
+{% endfor %}

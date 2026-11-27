@@ -1,0 +1,8 @@
+{
+  "app_url": "http://127.0.0.1:8000",
+  "token": "o mesmo MINERVA_WORKER_TOKEN do .env do app",
+  "pcs_config": "/etc/pedidos-torrent/config.json",
+  "base": "/usr/local/bin/pedidos-torrent-worker",
+  "estado": "/var/lib/minerva-seerr/estado.json",
+  "log": "/var/log/minerva-entrega.log"
+}
