@@ -37,7 +37,8 @@ class TestLibretro(unittest.TestCase):
         self.assertTrue(libretro.url_capa("Sony_-_PlayStation_2", "A & B (USA)").endswith("/Named_Boxarts/A%20%26%20B%20%28USA%29.png"))
         svg = placeholder("Guitar Hero III - Legends of <Rock>", "X360")
         self.assertIn("&lt;ROCK&gt;", svg)
-        self.assertIn("#ffd23f", svg)
+        self.assertNotIn("#ffd23f", svg)  # selo amarelo vem do HTML; no SVG duplicava
+        self.assertNotIn(">X360<", svg)
 
 
 if __name__ == "__main__":

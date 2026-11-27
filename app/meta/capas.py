@@ -189,7 +189,8 @@ def obter(con, jogo_id: int, baixar=libretro._get) -> str | None:
 
 
 def placeholder(titulo: str, plataforma: str) -> str:
-    """Capa 3:4 sem imagem, no estilo do painel: fundo grafite, título em Archivo, selo amarelo."""
+    """Capa 3:4 sem imagem, no estilo do painel: fundo grafite, título em Archivo.
+    O selo amarelo da plataforma fica no HTML (.selo), por cima desta imagem; não repetir aqui."""
     palavras, linhas, atual = titulo.upper().split(), [], ""
     for p in palavras:
         if len(atual) + len(p) + 1 > 14 and atual:
@@ -206,8 +207,6 @@ def placeholder(titulo: str, plataforma: str) -> str:
 <g stroke="#1c1c1c">{"".join(f'<path d="M0 {y}H300"/>' for y in range(20, 400, 20))}</g>
 <text y="{230 - 17 * len(linhas)}" font-family="Archivo, Helvetica Neue, Arial, sans-serif" font-weight="800"
  font-stretch="75%" font-size="30" fill="#e8e6e1">{texto}</text>
-<rect x="20" y="352" width="{12 + 9 * len(plataforma)}" height="26" fill="#ffd23f"/>
-<text x="26" y="370" font-family="JetBrains Mono, monospace" font-weight="700" font-size="14" fill="#0a0a0a">{html.escape(plataforma)}</text>
 <text x="280" y="370" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" fill="#75726c">SEM CAPA</text>
 </svg>'''
 
