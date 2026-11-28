@@ -104,8 +104,9 @@ def copiar(pc, arquivos_host, destino):
         if not faltam:
             return
         for p, s in faltam:
-            leitor = subprocess.Popen(["ionice", "-c3", "nice", "-n", "10", "tar", "--format=pax", "-cf", "-",
-                                       "-C", os.path.dirname(p), os.path.basename(p)], stdout=subprocess.PIPE)
+            # leitor_tar: pausa os torrents / limita a leitura no host do homelab (modo cópia), senão só nice
+            leitor = subprocess.Popen(base.leitor_tar(["tar", "--format=pax", "-cf", "-", "-C", os.path.dirname(p),
+                                                       os.path.basename(p)], "minerva"), stdout=subprocess.PIPE)
             r = base.ssh(pc, f'tar -xf - -C "{destino}"', entrada=leitor.stdout, timeout=None)
             leitor.stdout.close()
             leitor.wait()
@@ -131,6 +132,8 @@ def main():
         e[chave] = time.time()
         return True
 
+    if base.MODO_COPIA and not TESTE:
+        base.MODO_COPIA.limpar()
     pend = app("/api/worker/entregas")
     if not pend:
         return
@@ -206,6 +209,8 @@ def main():
                 avisar(pid, f"❌ Não consegui copiar {rotulo} para o {pc['nome']}: {str(e)[:300]}\n"
                             "Continua no servidor; tento de novo a cada 5 min (sem repetir este aviso).")
 
+    if base.MODO_COPIA and not TESTE:
+        base.MODO_COPIA.fim()  # retoma os torrents antes de desligar os PCs
     for chave in acordados:
         base.ssh(base.PCS[chave], "shutdown.exe /s /t 120", timeout=60)
         log(f"{base.PCS[chave]['nome']}: desligando (foi ligado pelo worker)")
