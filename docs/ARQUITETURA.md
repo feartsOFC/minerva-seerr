@@ -92,6 +92,9 @@ uma coleção muda.
 4. Se o espaço livre no qBit menos o que falta baixar dos pedidos ativos ficar abaixo do mínimo → `sem_espaco`.
    O pedido começa sozinho quando liberar.
 5. **Sincronização** (20 s): progresso por arquivo e velocidade; `baixado` quando todos os arquivos chegam a 100%.
+   A cada 5 min, **conferência**: nos torrents dos pedidos em andamento, arquivo ligado que nenhum pedido usa é
+   desligado ("carona" que divide pedaço com o arquivo pedido) e arquivo de pedido baixando que ficou desligado e
+   incompleto é religado. Tudo vai para o log (`conferência …`); nada é apagado do disco.
 6. **Liberação** (entregue ou cancelado): se nenhum outro pedido ativo usa o torrent, apaga o torrent com os
    arquivos. Se não, só põe os arquivos deste pedido em prioridade 0 e devolve a lista para o worker apagar do
    disco.

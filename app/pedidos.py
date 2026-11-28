@@ -66,6 +66,8 @@ NO_QBIT = ("na_fila", "baixando", "pausado", "baixado", "entregando")
 EM_DOWNLOAD = ("na_fila", "baixando", "pausado")   # ocupam vaga de download (baixado já libera a vaga)
 ESPERANDO_VAGA = ("aguardando_vez", "sem_espaco")
 MSG_VEZ = "esperando a vez — começa quando o download atual terminar"
+CONFERIR_A_CADA = 300   # s entre conferências dos arquivos ligados no qBit (ver conferir)
+_ultima_conferencia = 0.0
 PADROES = {
     "qbit_url": os.environ.get("QBIT_URL", "http://localhost:8080"),
     "qbit_usuario": os.environ.get("QBIT_USUARIO", ""),
@@ -333,6 +335,50 @@ def sincronizar(con, qb: Qbit) -> dict:
     resumo["reenviados"] = enviados
     if enviados:
         _atualizar(con, qb, resumo)  # já lê o estado no qBit dos que acabaram de entrar
+    global _ultima_conferencia
+    if time.time() - _ultima_conferencia >= CONFERIR_A_CADA:
+        _ultima_conferencia = time.time()
+        resumo.update(conferir(con, qb))
+    return resumo
+
+
+def conferir(con, qb: Qbit) -> dict:
+    """Arquivos ligados no qBit × pedidos. Nos torrents dos pedidos em andamento:
+    - arquivo ligado que nenhum pedido em andamento usa → desliga (prioridade 0) e registra no log. Visto em
+      28/11/2026: vizinhos que dividem um pedaço com o arquivo pedido apareciam ligados ("caronas");
+    - arquivo de pedido ainda baixando que está desligado e incompleto → religa.
+    Não apaga nada do disco (quem apaga é a entrega)."""
+    linhas = con.execute(
+        f"SELECT pa.infohash, pa.qbit_index, p.status FROM pedido_arquivos pa JOIN pedidos p ON p.id=pa.pedido_id "
+        f"WHERE p.status IN ({','.join('?' * len(NO_QBIT))}) AND pa.qbit_index IS NOT NULL", NO_QBIT).fetchall()
+    usados: dict = {}
+    baixando: dict = {}
+    for infohash, idx, status in linhas:
+        usados.setdefault(infohash, set()).add(idx)
+        if status in EM_DOWNLOAD:
+            baixando.setdefault(infohash, set()).add(idx)
+    resumo = {"desligados": 0, "religados": 0}
+    if not usados:
+        return resumo
+    existem = {t["hash"] for t in qb.info(list(usados))}
+    for infohash in usados.keys() & existem:
+        lista = qb.arquivos(infohash)
+        sobra = [f for f in lista if f.get("priority", 0) > 0 and f["index"] not in usados[infohash]]
+        faltam = [f for f in lista if f["index"] in baixando.get(infohash, set())
+                  and f.get("priority", 0) == 0 and f.get("progress", 0) < 1]
+        try:
+            if sobra:
+                qb.prioridade(infohash, [f["index"] for f in sobra], 0)
+                log.warning("conferência %s: %d arquivo(s) ligados sem pedido desligados: %s", infohash[:8], len(sobra),
+                            "; ".join(f["name"].rsplit("/", 1)[-1][:60] for f in sobra[:10]))
+                resumo["desligados"] += len(sobra)
+            if faltam:
+                qb.prioridade(infohash, [f["index"] for f in faltam], 1)
+                log.warning("conferência %s: %d arquivo(s) de pedido estavam desligados, religados: %s", infohash[:8],
+                            len(faltam), "; ".join(f["name"].rsplit("/", 1)[-1][:60] for f in faltam[:10]))
+                resumo["religados"] += len(faltam)
+        except ErroQbit as e:
+            log.warning("conferência %s falhou: %s", infohash[:8], e)
     return resumo
 
 

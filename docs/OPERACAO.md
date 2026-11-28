@@ -72,6 +72,10 @@ catalogo.ligar_complementos(c,p); c.commit()"
 | `baixado` "cópia falhou" | o worker tenta a cada 5 min e avisa uma vez só; ver `/var/log/homelab-avisos.log` |
 | `entregando` parado > 2 h | o worker pega de novo sozinho |
 
+Arquivos ligados sem pedido no qBit: a conferência (5 min) desliga sozinha e registra em
+`pct exec 210 -- docker logs minerva-seerr 2>&1 | grep conferência`. Ela não apaga do disco: um arquivo que já baixou
+fica no `/data` até alguém apagar (cuidado com os que dividem pedaço com um pedido ainda não entregue).
+
 Pausar as entregas: `mv /etc/cron.d/homelab-minerva-entrega{,.pausado}` (e o contrário para religar).
 
 ## Arquivos no servidor

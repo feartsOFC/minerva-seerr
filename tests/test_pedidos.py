@@ -221,6 +221,21 @@ class TestPedidos(unittest.TestCase):
         pedidos.sincronizar(self.con, self.qb)
         self.assertEqual(pedidos.pedido(self.con, a["id"])["status"], "aguardando_vez")
 
+    def test_conferencia_desliga_carona_e_religa_pedido(self):
+        a = self._pedir(self.bruno, "Halo 3", "Brazil")
+        h = self.qb.hash
+        carona = next(f["index"] for f in self.qb.lista if f["name"].endswith("Halo 3 (USA, Europe).zip"))
+        self.qb.prio[h][carona] = 1                                    # vizinho ligado sem pedido
+        idx = a["arquivos"][0]["qbit_index"]
+        self.qb.prio[h][idx] = 0                                       # arquivo do pedido desligado e incompleto
+        r = pedidos.conferir(self.con, self.qb)
+        self.assertEqual((r["desligados"], r["religados"]), (1, 1))
+        self.assertEqual(self.qb.ligados(), ["Halo 3 (Brazil).zip"])
+        self.assertEqual(pedidos.conferir(self.con, self.qb), {"desligados": 0, "religados": 0})
+        self.con.execute("UPDATE pedidos SET status='baixado' WHERE id=?", (a["id"],))
+        self.qb.prio[h][idx] = 0                                       # baixado: não religa
+        self.assertEqual(pedidos.conferir(self.con, self.qb)["religados"], 0)
+
     def test_indice_por_caminho(self):
         lista = [{"index": 0, "name": "Minerva_Myrient/A/b.zip"}, {"index": 1, "name": "Minerva_Myrient\\A\\c.zip"}]
         self.assertEqual(indice_por_caminho(lista, "A/c.zip"), 1)

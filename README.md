@@ -38,7 +38,7 @@ baixar a coleção inteira. Opcionalmente, um worker leva o resultado para o PC 
 | Downloads | qBittorrent Web API v2 (torrent da coleção parado → prioridade 0 em tudo → liga só o pedido) |
 | Metadados | libretro-thumbnails (GitHub), IGDB (Twitch, opcional) |
 | Entrega | worker em Python no host: Wake-on-LAN, SSH + `tar`, aviso no Discord (opcional) |
-| Testes | 72 testes `unittest`, incluindo bencode/infohash com padding e o `so=` de um torrent real |
+| Testes | 73 testes `unittest`, incluindo bencode/infohash com padding e o `so=` de um torrent real |
 
 ## Coleções
 
