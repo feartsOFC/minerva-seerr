@@ -347,7 +347,7 @@ def _laco_status():
         try:
             c = _con()
             try:
-                if c.execute("SELECT 1 FROM pedidos WHERE status IN ('na_fila','baixando','pausado','sem_espaco') "
+                if c.execute("SELECT 1 FROM pedidos WHERE status IN ('na_fila','baixando','pausado','sem_espaco','aguardando_vez') "
                              "LIMIT 1").fetchone():
                     pedidos.sincronizar(c, pedidos.cliente(c))
             finally:

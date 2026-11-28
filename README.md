@@ -17,7 +17,9 @@ baixar a coleção inteira. Opcionalmente, um worker leva o resultado para o PC 
 - **Página do jogo**: capa, sinopse, ano, nota e gênero (libretro-thumbnails + IGDB), versões agrupadas e, no
   Xbox 360, um interruptor por DLC e por title update. O total é conferido contra o limite enquanto você escolhe.
 - **Solicitações**: progresso ao vivo, cancelar, aprovar (admin) e repetir.
-- **Ajustes** (admin): limite de GB por pedido, pedidos por dia, espaço mínimo no qBit, aprovação, pasta no PC,
+- **Fila de downloads**: um pedido baixa por vez (ajustável; 0 = sem limite); os outros ficam "esperando a vez" e
+  começam sozinhos, por ordem de pedido.
+- **Ajustes** (admin): limite de GB por pedido, pedidos por dia, quantos baixam ao mesmo tempo, espaço mínimo no qBit, aprovação, pasta no PC,
   teste do qBit, chaves do IGDB, atualização do índice, usuários e troca de senha.
 - **Usuários** com papel (admin/usuário) e um PC de entrega por pessoa.
 - **Link de configuração de uso único** para criar o primeiro admin e colar chaves sem terminal.
@@ -36,7 +38,7 @@ baixar a coleção inteira. Opcionalmente, um worker leva o resultado para o PC 
 | Downloads | qBittorrent Web API v2 (torrent da coleção parado → prioridade 0 em tudo → liga só o pedido) |
 | Metadados | libretro-thumbnails (GitHub), IGDB (Twitch, opcional) |
 | Entrega | worker em Python no host: Wake-on-LAN, SSH + `tar`, aviso no Discord (opcional) |
-| Testes | 70 testes `unittest`, incluindo bencode/infohash com padding e o `so=` de um torrent real |
+| Testes | 72 testes `unittest`, incluindo bencode/infohash com padding e o `so=` de um torrent real |
 
 ## Coleções
 

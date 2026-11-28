@@ -82,6 +82,7 @@ class TestPedidos(unittest.TestCase):
         store.gravar_colecao(self.con, URL, nome_colecao(URL), local, ler_torrent(self.dados))
         self.con.commit()
         self.qb = QbitFalso(self.dados, h)
+        self.con.execute("INSERT INTO ajustes VALUES('ped_baixando_max', '0')")   # sem limite; ver test_um_por_vez
         self.bruno = self._usuario("bruno", True, "bruno")
         self.lucas = self._usuario("lucas", False, "lucas")
 
@@ -186,6 +187,39 @@ class TestPedidos(unittest.TestCase):
         pedidos.cancelar(self.con, p["id"], self.qb)
         self.assertEqual(pedidos.pedido(self.con, p["id"])["status"], "cancelado")
         self.assertIsNone(self.qb.torrent(self.qb.hash))
+
+    def test_um_por_vez(self):
+        self.con.execute("UPDATE ajustes SET valor='1' WHERE chave='ped_baixando_max'")
+        a = self._pedir(self.bruno, "Halo 3", "Brazil")
+        b = self._pedir(self.lucas, "Guitar Hero III - Legends of Rock", "USA · Rev 1")
+        c = self._pedir(self.lucas, "Forza Motorsport 3", "USA")
+        self.assertEqual(a["status"], "na_fila")
+        self.assertEqual((b["status"], c["status"]), ("aguardando_vez", "aguardando_vez"))
+        self.assertEqual(b["erro"], pedidos.MSG_VEZ)
+        self.assertEqual(self.qb.ligados(), ["Halo 3 (Brazil).zip"])           # só o 1º foi para o qBit
+        pedidos.sincronizar(self.con, self.qb)                                   # a ainda baixando: ninguém anda
+        self.assertEqual(pedidos.pedido(self.con, b["id"])["status"], "aguardando_vez")
+        self.qb.lista[1]["progress"] = 1.0                                       # Halo 3 (Brazil) terminou
+        pedidos.sincronizar(self.con, self.qb)
+        self.assertEqual(pedidos.pedido(self.con, a["id"])["status"], "baixado")  # baixado libera a vaga
+        q = pedidos.pedido(self.con, b["id"])
+        self.assertEqual((q["status"], q["erro"]), ("baixando", None))           # o próximo por ordem de pedido
+        self.assertEqual(pedidos.pedido(self.con, c["id"])["status"], "aguardando_vez")
+        pedidos.cancelar(self.con, b["id"], self.qb)                             # cancelar também libera
+        pedidos.sincronizar(self.con, self.qb)
+        self.assertEqual(pedidos.pedido(self.con, c["id"])["status"], "baixando")
+        pedidos.cancelar(self.con, c["id"], self.qb)
+
+    def test_sem_espaco_respeita_a_vez(self):
+        self.con.execute("UPDATE ajustes SET valor='1' WHERE chave='ped_baixando_max'")
+        self.qb.livre = 10 * GB
+        a = self._pedir(self.bruno, "Halo 3", "Brazil")
+        self.assertEqual(a["status"], "sem_espaco")                              # sem espaço não ocupa vaga
+        self.qb.livre = 500 * GB
+        b = self._pedir(self.lucas, "Guitar Hero III - Legends of Rock", "USA · Rev 1")
+        self.assertEqual(b["status"], "na_fila")
+        pedidos.sincronizar(self.con, self.qb)
+        self.assertEqual(pedidos.pedido(self.con, a["id"])["status"], "aguardando_vez")
 
     def test_indice_por_caminho(self):
         lista = [{"index": 0, "name": "Minerva_Myrient/A/b.zip"}, {"index": 1, "name": "Minerva_Myrient\\A\\c.zip"}]

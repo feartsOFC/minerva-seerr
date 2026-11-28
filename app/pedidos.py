@@ -1,8 +1,10 @@
 """Pedidos: limites, envio ao qBittorrent (só o arquivo pedido), status e entrega.
 
 Fluxo de status:
-  aguardando_aprovacao → na_fila → baixando → baixado → entregando → entregue
-                     ↘ sem_espaco (volta sozinho quando liberar)        ↘ erro / cancelado
+  aguardando_aprovacao → aguardando_vez → na_fila → baixando → baixado → entregando → entregue
+                                       ↘ sem_espaco (volta sozinho quando liberar)  ↘ erro / cancelado
+aguardando_vez: ainda não foi para o qBit porque já há `baixando_max` pedidos baixando (padrão 1; 0 = sem limite).
+A fila anda por ordem de pedido na sincronização (a cada 20 s), quando um pedido termina de baixar ou sai.
 Quem faz a entrega no PC é o worker do host (WoL, cópia, conferência); o app só diz o que está pronto
 e, quando o worker confirma, tira o arquivo do torrent (e o torrent inteiro, se ninguém mais usa).
 """
@@ -59,8 +61,11 @@ CREATE TABLE IF NOT EXISTS pedido_arquivos (
 CREATE INDEX IF NOT EXISTS ix_ped_status ON pedidos(status);
 CREATE INDEX IF NOT EXISTS ix_pa_hash ON pedido_arquivos(infohash);
 """
-ATIVOS = ("aguardando_aprovacao", "sem_espaco", "na_fila", "baixando", "pausado", "baixado", "entregando")
+ATIVOS = ("aguardando_aprovacao", "aguardando_vez", "sem_espaco", "na_fila", "baixando", "pausado", "baixado", "entregando")
 NO_QBIT = ("na_fila", "baixando", "pausado", "baixado", "entregando")
+EM_DOWNLOAD = ("na_fila", "baixando", "pausado")   # ocupam vaga de download (baixado já libera a vaga)
+ESPERANDO_VAGA = ("aguardando_vez", "sem_espaco")
+MSG_VEZ = "esperando a vez — começa quando o download atual terminar"
 PADROES = {
     "qbit_url": os.environ.get("QBIT_URL", "http://localhost:8080"),
     "qbit_usuario": os.environ.get("QBIT_USUARIO", ""),
@@ -69,6 +74,7 @@ PADROES = {
     "qbit_pasta": "",                      # vazio = pasta padrão do qBit (+ categoria)
     "limite_gb": 20,
     "pedidos_por_dia": 5,
+    "baixando_max": 1,                    # pedidos baixando ao mesmo tempo; os outros esperam a vez (0 = sem limite)
     "espaco_minimo_gb": 30,               # abaixo disso, pedido novo espera (sem_espaco)
     "aprovacao": False,                   # True: pedidos de usuário comum esperam o admin
     "destino_pc": "Jogos/{plataforma}",   # relativo à pasta de torrents do PC do dono
@@ -161,29 +167,29 @@ def criar(con, usuario: dict, jogo_id: int, versao_chave: str, qb: Qbit | None =
     rotulo = (v["rotulo"] + (f" + {mais}" if mais else "")) if v else f"Só {mais}"
     linha = store.arquivo(con, arqs[0]["colecao_id"], arqs[0]["idx"])
     magnet = store.magnet_de(linha, a["trackers"])
-    status = "aguardando_aprovacao" if a["aprovacao"] and usuario["papel"] != "admin" else "na_fila"
+    status = "aguardando_aprovacao" if a["aprovacao"] and usuario["papel"] != "admin" else "aguardando_vez"
     agora = time.time()
     cur = con.execute(
         "INSERT INTO pedidos(usuario_id, jogo_id, titulo, plataforma, sistema, versao_chave, versao_rotulo, tamanho, "
         "status, magnet, criado_em, atualizado_em, aprovado_por) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (usuario["id"], jogo_id, j["titulo"], j["plataforma"], j["sistema"], versao_chave or "", rotulo, tamanho,
-         status, magnet, agora, agora, usuario["id"] if status == "na_fila" else None))
+         status, magnet, agora, agora, usuario["id"] if status == "aguardando_vez" else None))
     pid = cur.lastrowid
     con.executemany("INSERT INTO pedido_arquivos(pedido_id, colecao_id, infohash, so, caminho, tamanho, subpasta) "
                     "VALUES(?,?,?,?,?,?,?)",
                     [(pid, x["colecao_id"], x["infohash"], x["idx"], x["caminho"], x["tamanho"], x["subpasta"])
                      for x in arqs])
     con.commit()
-    if status == "na_fila":
-        enviar(con, pid, qb or cliente(con))
+    if status == "aguardando_vez":
+        entrar(con, pid, qb or cliente(con))
     return pedido(con, pid)
 
 
 def aprovar(con, pid: int, admin: dict, qb: Qbit | None = None):
-    if con.execute("UPDATE pedidos SET status='na_fila', aprovado_por=?, atualizado_em=? "
+    if con.execute("UPDATE pedidos SET status='aguardando_vez', aprovado_por=?, atualizado_em=? "
                    "WHERE id=? AND status='aguardando_aprovacao'", (admin["id"], time.time(), pid)).rowcount:
         con.commit()
-        enviar(con, pid, qb or cliente(con))
+        entrar(con, pid, qb or cliente(con))
 
 
 def cancelar(con, pid: int, qb: Qbit | None = None):
@@ -196,6 +202,25 @@ def cancelar(con, pid: int, qb: Qbit | None = None):
 
 
 # ------------------------------------------------------------------------------------------- qBit
+
+def vagas(con) -> int | None:
+    """Quantos pedidos ainda podem ir para o qBit agora (None = sem limite)."""
+    maximo = int(ajustes(con)["baixando_max"])
+    if maximo <= 0:
+        return None
+    (n,) = con.execute(f"SELECT COUNT(*) FROM pedidos WHERE status IN ({','.join('?' * len(EM_DOWNLOAD))})",
+                       EM_DOWNLOAD).fetchone()
+    return max(0, maximo - n)
+
+
+def entrar(con, pid: int, qb: Qbit) -> bool:
+    """Manda o pedido para o qBit se houver vaga; senão ele espera a vez. True se foi enviado (ou tentou)."""
+    if vagas(con) == 0:
+        _marcar(con, pid, "aguardando_vez", MSG_VEZ)
+        return False
+    enviar(con, pid, qb)
+    return True
+
 
 def _espaco_ok(con, qb: Qbit, tamanho: int) -> bool:
     livre = qb.espaco_livre()
@@ -292,14 +317,29 @@ def _marcar(con, pid: int, status: str, erro: str | None = None, **extra):
 
 
 def sincronizar(con, qb: Qbit) -> dict:
-    """Atualiza progresso/status dos pedidos no qBit e tenta de novo os que esperavam espaço."""
+    """Atualiza progresso/status dos pedidos no qBit e, se abriu vaga, manda os que esperavam (vez ou espaço)
+    por ordem de pedido."""
     resumo = {"atualizados": 0, "reenviados": 0}
-    for (pid,) in con.execute("SELECT id FROM pedidos WHERE status='sem_espaco' ORDER BY id").fetchall():
+    _atualizar(con, qb, resumo)
+    enviados = 0
+    for (pid,) in con.execute(f"SELECT id FROM pedidos WHERE status IN ({','.join('?' * len(ESPERANDO_VAGA))}) "
+                              "ORDER BY id", ESPERANDO_VAGA).fetchall():
+        if vagas(con) == 0:
+            if pedido(con, pid)["status"] == "sem_espaco":
+                _marcar(con, pid, "aguardando_vez", MSG_VEZ)
+            continue
         enviar(con, pid, qb)
-        resumo["reenviados"] += 1
+        enviados += 1
+    resumo["reenviados"] = enviados
+    if enviados:
+        _atualizar(con, qb, resumo)  # já lê o estado no qBit dos que acabaram de entrar
+    return resumo
+
+
+def _atualizar(con, qb: Qbit, resumo: dict):
     ativos = con.execute("SELECT id FROM pedidos WHERE status IN ('na_fila','baixando','pausado')").fetchall()
     if not ativos:
-        return resumo
+        return
     ped = {pid: pedido(con, pid) for (pid,) in ativos}
     hashes = {f["infohash"] for p in ped.values() for f in p["arquivos"]}
     torrents = {t["hash"]: t for t in qb.info(list(hashes))}
@@ -343,7 +383,6 @@ def sincronizar(con, qb: Qbit) -> dict:
             extra["baixado_em"] = time.time()
         _marcar(con, pid, novo, "erro no qBittorrent (arquivos sumiram?)" if novo == "erro" else None, **extra)
         resumo["atualizados"] += 1
-    return resumo
 
 
 # ------------------------------------------------------------------------------------------- leitura

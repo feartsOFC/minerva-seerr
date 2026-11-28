@@ -65,6 +65,7 @@ catalogo.ligar_complementos(c,p); c.commit()"
 
 | Status | O que fazer |
 |---|---|
+| `aguardando_vez` | normal: só 1 pedido baixa por vez (Ajustes → "baixando ao mesmo tempo"); anda sozinho quando o atual vira `baixado` ou é cancelado. Se o atual ficar `pausado` para sempre, a fila também para |
 | `sem_espaco` | espera sozinho; libera espaço no `/data` do CT206 ou baixa "espaço mínimo" em Ajustes |
 | `erro` "torrent removido" | alguém apagou no qBit: botão **Repetir** em Solicitações |
 | `baixado` com mensagem "vai para o PC depois do…" | faixa bloqueada (ponta 17:30–20:30 em dias úteis, backup 02:15–04:30); normal |

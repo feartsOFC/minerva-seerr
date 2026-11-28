@@ -18,6 +18,7 @@ rota = APIRouter()
 
 ROTULO_STATUS = {
     "aguardando_aprovacao": ("AGUARDANDO APROVAÇÃO", "amarelo"), "sem_espaco": ("SEM ESPAÇO NO SERVIDOR", "amarelo"),
+    "aguardando_vez": ("ESPERANDO A VEZ", "apagado"),
     "na_fila": ("NA FILA", "apagado"), "baixando": ("BAIXANDO", "amarelo"), "pausado": ("PAUSADO", "amarelo"),
     "baixado": ("BAIXADO · ESPERANDO O PC", "amarelo"), "entregando": ("COPIANDO PARA O PC", "amarelo"),
     "entregue": ("DISPONÍVEL NO PC", "verde"), "erro": ("ERRO", "vermelho"), "cancelado": ("CANCELADO", "apagado"),
@@ -254,9 +255,9 @@ def acao_pedido(request: Request, pid: int, acao: str, todos: bool = True, miner
                 elif acao == "aprovar" and u["papel"] == "admin":
                     pedidos.aprovar(c, pid, u)
                 elif acao == "repetir" and p["status"] == "erro":
-                    c.execute("UPDATE pedidos SET status='na_fila', erro=NULL WHERE id=?", (pid,))
+                    c.execute("UPDATE pedidos SET status='aguardando_vez', erro=NULL WHERE id=?", (pid,))
                     c.commit()
-                    pedidos.enviar(c, pid, pedidos.cliente(c))
+                    pedidos.entrar(c, pid, pedidos.cliente(c))
             except pedidos.ErroPedido:
                 pass
         lista, ver_todos = _lista_pedidos(c, u, todos)
@@ -330,8 +331,10 @@ async def salvar_pedidos(request: Request, minerva_sessao: str | None = Cookie(N
         if not _admin(c, minerva_sessao):
             return _res(False, "só o admin")
         try:
-            num = {"limite_gb": (1, 500), "pedidos_por_dia": (1, 100), "espaco_minimo_gb": (0, 2000)}
+            num = {"limite_gb": (1, 500), "pedidos_por_dia": (1, 100), "espaco_minimo_gb": (0, 2000), "baixando_max": (0, 20)}
             for k, (lo, hi) in num.items():
+                if k == "baixando_max" and k not in form:  # página aberta antes do campo existir
+                    continue
                 v = int(form.get(k, ""))
                 if not lo <= v <= hi:
                     return _res(False, f"{k} fora de {lo}–{hi}")

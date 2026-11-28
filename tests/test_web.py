@@ -57,7 +57,7 @@ class TestWeb(unittest.TestCase):
 
     def test_admin_salva_limites(self):
         cl = self.cliente("bruno", "senha-boa-1")
-        r = cl.post("/ajustes/pedidos", data={"limite_gb": "25", "pedidos_por_dia": "4", "espaco_minimo_gb": "40",
+        r = cl.post("/ajustes/pedidos", data={"limite_gb": "25", "pedidos_por_dia": "4", "espaco_minimo_gb": "40", "baixando_max": "2",
                                               "destino_pc": "Jogos\\{plataforma}", "qbit_url": "http://qbit.exemplo:8080"})
         self.assertIn("✓", r.text)
         from app import config, pedidos
@@ -65,7 +65,8 @@ class TestWeb(unittest.TestCase):
         c = store.conectar(config.BANCO)
         a = pedidos.ajustes(c)
         c.close()
-        self.assertEqual((a["limite_gb"], a["destino_pc"], a["aprovacao"]), (25, "Jogos/{plataforma}", False))
+        self.assertEqual((a["limite_gb"], a["destino_pc"], a["aprovacao"], a["baixando_max"]),
+                         (25, "Jogos/{plataforma}", False, 2))
         self.assertIn("✗", cl.post("/ajustes/pedidos", data={"limite_gb": "0", "pedidos_por_dia": "4",
                                                                "espaco_minimo_gb": "40", "destino_pc": "x"}).text)
 

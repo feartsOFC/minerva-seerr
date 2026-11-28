@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block titulo %}Solicitações{% endblock %}
 {% block corpo %}
-{% set ativos = lista|selectattr('status', 'in', ['na_fila','baixando','pausado','baixado','entregando','sem_espaco','aguardando_aprovacao'])|list %}
+{% set ativos = lista|selectattr('status', 'in', ['na_fila','baixando','pausado','baixado','entregando','sem_espaco','aguardando_aprovacao','aguardando_vez'])|list %}
 <section class="resumo">
   <div class="p"><div class="rot"><b>EM ANDAMENTO</b></div><div class="v">{{ ativos|length }}</div></div>
   <div class="p"><div class="rot"><b>NO PC</b></div><div class="v">{{ lista|selectattr('status','equalto','entregue')|list|length }}</div></div>
-  <div class="p"><div class="rot amarelo"><b>ESPERANDO</b></div><div class="v">{{ ativos|selectattr('status','in',['baixado','aguardando_aprovacao','sem_espaco'])|list|length }}</div></div>
+  <div class="p"><div class="rot amarelo"><b>ESPERANDO</b></div><div class="v">{{ ativos|selectattr('status','in',['baixado','aguardando_aprovacao','aguardando_vez','sem_espaco'])|list|length }}</div></div>
   <div class="p"><div class="rot"><b>EM FILA</b></div><div class="v">{{ (ativos|sum(attribute='tamanho'))|tamanho }}</div></div>
 </section>
 <section class="p">

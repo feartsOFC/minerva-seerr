@@ -82,7 +82,10 @@ uma coleção muda.
 
 1. Confere: a versão e os complementos pertencem ao jogo; o tamanho total (DLCs incluídas) cabe no limite; a
    cota diária (o admin não tem); e não há pedido ativo repetido.
-2. Status inicial `na_fila`, ou `aguardando_aprovacao` se a aprovação estiver ligada e quem pediu não for admin.
+2. Status inicial `aguardando_vez`, ou `aguardando_aprovacao` se a aprovação estiver ligada e quem pediu não for admin.
+   **Fila**: só vai para o qBit se houver vaga — no máximo `baixando_max` pedidos (padrão 1; 0 = sem limite) em
+   `na_fila`/`baixando`/`pausado`. Sem vaga, fica em `aguardando_vez`; a sincronização manda o próximo, por ordem
+   de pedido, quando um vira `baixado` ou é cancelado. Um pedido em `sem_espaco` não ocupa vaga.
 3. **Envio ao qBit**: se o torrent da coleção ainda não existe, ele entra **parado**, com todos os arquivos em
    prioridade 0. Depois o app liga só os do pedido e inicia. Se já existe (outro pedido da mesma coleção), só
    liga os arquivos novos.
@@ -93,7 +96,7 @@ uma coleção muda.
    arquivos. Se não, só põe os arquivos deste pedido em prioridade 0 e devolve a lista para o worker apagar do
    disco.
 
-Status: `aguardando_aprovacao → na_fila → baixando → baixado → entregando → entregue` (mais `sem_espaco`,
+Status: `aguardando_aprovacao → aguardando_vez → na_fila → baixando → baixado → entregando → entregue` (mais `sem_espaco`,
 `pausado`, `erro`, `cancelado`).
 
 ## 6. Entrega (worker no host)
@@ -105,7 +108,8 @@ Status: `aguardando_aprovacao → na_fila → baixando → baixado → entregand
   usa o mesmo lock no cron.
 - Acha o arquivo na pasta final ou na de incompletos do qBit (quando só parte do torrent é pedida, o qBit não
   move o arquivo). Copia com `tar --format=pax` → `ssh` → `tar.exe -x` no Windows e confere o tamanho de cada
-  arquivo. Tenta até 3 vezes.
+  arquivo. Tenta até 3 vezes. A leitura do `tar` passa pelo `leitor_tar` do worker base: no host do homelab ele
+  pausa os torrents durante a cópia e limita a leitura se o disco saturar (modo cópia); fora dele, só `nice`.
 - Pastas no PC: `Jogos\<plataforma>`, `…\DLC\<jogo>`, `…\Updates\<jogo>` (nomes sem acento nem caracteres
   proibidos no Windows). A pasta é criada com `[IO.Directory]::CreateDirectory`, porque o `New-Item` do
   PowerShell 5.1 não aceita `-LiteralPath`.

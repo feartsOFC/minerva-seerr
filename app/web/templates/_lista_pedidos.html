@@ -10,14 +10,14 @@
   </div>
   <div class="prog">
     <div class="linha"><span class="st {{ st[1] }}">{{ st[0] }}</span><span class="pct">{% if p.status in ('baixando','na_fila','pausado') %}{{ (p.progresso * 100)|round(0)|int }}%{% endif %}{% if p.status == 'baixando' and p.velocidade %} · {{ p.velocidade|tamanho }}/S{% endif %}</span></div>
-    {% if p.status not in ('cancelado','erro','aguardando_aprovacao','sem_espaco') %}
+    {% if p.status not in ('cancelado','erro','aguardando_aprovacao','aguardando_vez','sem_espaco') %}
     <span class="barrinha"><i style="width: {{ (p.progresso * 100)|round(1) }}%; --cor: var(--{{ 'verde' if p.status == 'entregue' else 'amarelo' }})"></i></span>
     {% endif %}
   </div>
   <div class="bts">
     {% if p.status == 'aguardando_aprovacao' and u.papel == 'admin' %}<button class="ok" hx-post="/solicitacoes/{{ p.id }}/aprovar?todos={{ 'true' if todos else 'false' }}" hx-target="#lista">Aprovar</button>{% endif %}
     {% if p.status == 'erro' %}<button class="ok" hx-post="/solicitacoes/{{ p.id }}/repetir?todos={{ 'true' if todos else 'false' }}" hx-target="#lista">Repetir</button>{% endif %}
-    {% if p.status in ('aguardando_aprovacao','sem_espaco','na_fila','baixando','pausado','baixado') %}<button class="nao" hx-post="/solicitacoes/{{ p.id }}/cancelar?todos={{ 'true' if todos else 'false' }}" hx-target="#lista" hx-confirm="Cancelar o pedido de {{ p.titulo }}?">Cancelar</button>{% endif %}
+    {% if p.status in ('aguardando_aprovacao','aguardando_vez','sem_espaco','na_fila','baixando','pausado','baixado') %}<button class="nao" hx-post="/solicitacoes/{{ p.id }}/cancelar?todos={{ 'true' if todos else 'false' }}" hx-target="#lista" hx-confirm="Cancelar o pedido de {{ p.titulo }}?">Cancelar</button>{% endif %}
   </div>
 </article>
 {% else %}

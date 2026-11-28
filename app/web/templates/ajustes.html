@@ -17,6 +17,7 @@
       <label class="campo"><span>LIMITE POR PEDIDO (GB)</span><input type="number" name="limite_gb" min="1" max="500" value="{{ ped.limite_gb }}"></label>
       <label class="campo"><span>PEDIDOS POR DIA</span><input type="number" name="pedidos_por_dia" min="1" max="100" value="{{ ped.pedidos_por_dia }}"></label>
     </div>
+    <label class="campo"><span>BAIXANDO AO MESMO TEMPO <small>— os outros pedidos esperam a vez; 0 = sem limite</small></span><input type="number" name="baixando_max" min="0" max="20" value="{{ ped.baixando_max }}"></label>
     <label class="campo"><span>ESPAÇO MÍNIMO NO SERVIDOR (GB) <small>— abaixo disso o pedido espera</small></span><input type="number" name="espaco_minimo_gb" min="0" max="2000" value="{{ ped.espaco_minimo_gb }}"></label>
     <label class="campo"><span>PASTA NO PC <small>— dentro da pasta de torrents; {plataforma} vira o nome do console</small></span><input type="text" name="destino_pc" value="{{ ped.destino_pc }}" spellcheck="false"></label>
     <label class="campo"><span>QBITTORRENT (WEBUI)</span><input type="url" name="qbit_url" value="{{ ped.qbit_url }}" spellcheck="false"></label>

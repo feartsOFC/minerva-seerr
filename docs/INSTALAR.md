@@ -70,7 +70,8 @@ Pronto: entre em `MINERVA_URL/login`.
 ## 5. Ajustes na interface (admin)
 
 Em **Ajustes**:
-- **Pedidos e limites**: GB por pedido (as DLCs contam), pedidos por dia, espaço mínimo livre no qBit, pasta no PC
+- **Pedidos e limites**: GB por pedido (as DLCs contam), pedidos por dia, quantos pedidos baixam ao mesmo tempo
+  (padrão 1; 0 = sem limite), espaço mínimo livre no qBit, pasta no PC
   (`Jogos/{plataforma}`), aprovação do admin para usuários comuns;
 - **qBittorrent**: botão "Testar conexão" (mostra a versão e o espaço livre);
 - **Capas e fichas**: libretro-thumbnails (sem chave) e IGDB (Client ID/Secret);
@@ -154,6 +155,7 @@ Basta copiar a pasta `data/` com o app parado: `minerva.db`, `torrents/` (pode s
 | Sintoma | Causa provável |
 |---|---|
 | "Testar conexão" do qBit falha | Web UI desligado, IP fora da whitelist ou usuário/senha faltando no `.env` |
+| Pedido fica em "esperando a vez" | já há o máximo de pedidos baixando (Ajustes → "baixando ao mesmo tempo"); começa sozinho quando o atual terminar |
 | Pedido fica em "sem espaço" | o qBit tem menos livre que o "espaço mínimo"; começa sozinho quando liberar |
 | Login volta para a tela de login | navegador bloqueando cookies do endereço; teste em outra aba anônima |
 | Atrás do proxy, o cookie não sai `Secure` | `MINERVA_PROXY_IPS` não tem o IP do proxy |
